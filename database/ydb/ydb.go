@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"log"
 	"net/url"
 	"strconv"
 	"strings"
@@ -18,7 +18,7 @@ import (
 	"github.com/golang-migrate/migrate/v4/database/multistmt"
 	"github.com/hashicorp/go-multierror"
 
-	ydbsql "github.com/ydb-platform/ydb-go-sql"
+	"github.com/ydb-platform/ydb-go-sdk/v3"
 )
 
 var (
@@ -79,6 +79,7 @@ func (db *YDB) Open(dsn string) (database.Driver, error) {
 	} else {
 		q.Scheme = "grpc"
 	}
+
 	conn, err := sql.Open("ydb", q.String())
 	if err != nil {
 		return nil, err
@@ -138,12 +139,13 @@ func (db *YDB) execMigration(migration string) error {
 		}
 
 		if strings.HasPrefix(line, "CREATE") || strings.HasPrefix(line, "ALTER") || strings.HasPrefix(line, "DROP") {
-			ctx = ydbsql.WithSchemeQuery(ctx)
+			ctx = ydb.WithQueryMode(ctx, ydb.SchemeQueryMode)
 		}
 
 		break
 	}
-
+	// LOG
+	log.Print(migration)
 	_, err := db.conn.ExecContext(ctx, migration)
 	return err
 }
@@ -163,7 +165,7 @@ func (db *YDB) Run(r io.Reader) error {
 		return err
 	}
 
-	migration, err := ioutil.ReadAll(r)
+	migration, err := io.ReadAll(r)
 	if err != nil {
 		return err
 	}
@@ -197,7 +199,7 @@ func (db *YDB) Version() (int, bool, error) {
 
 func (db *YDB) SetVersion(version int, dirty bool) error {
 	tx, err := db.conn.BeginTx(context.Background(), &sql.TxOptions{
-		Isolation: sql.LevelSerializable,
+		Isolation: sql.LevelDefault,
 	})
 	if err != nil {
 		return err
@@ -225,7 +227,7 @@ func (db *YDB) migrationTableExists() error {
 		query = "SELECT DISTINCT Path FROM `.sys/partition_stats` WHERE Path = '" + db.config.MigrationsTable + "'"
 	)
 
-	res, err := db.conn.QueryContext(ydbsql.WithScanQuery(context.Background()), query)
+	res, err := db.conn.QueryContext(ydb.WithQueryMode(context.Background(), ydb.ScanQueryMode), query)
 	if err != nil {
 		return &database.Error{OrigErr: err, Query: []byte(query)}
 	}
@@ -270,7 +272,7 @@ func (db *YDB) ensureVersionTable() (err error) {
 			PRIMARY KEY(sequence)
 		)`, db.config.MigrationsTable)
 
-	if _, err := db.conn.ExecContext(ydbsql.WithSchemeQuery(context.Background()), query); err != nil {
+	if _, err := db.conn.ExecContext(ydb.WithQueryMode(context.Background(), ydb.SchemeQueryMode), query); err != nil {
 		return &database.Error{OrigErr: err, Query: []byte(query)}
 	}
 	return nil
@@ -278,7 +280,7 @@ func (db *YDB) ensureVersionTable() (err error) {
 
 func (db *YDB) Drop() (err error) {
 	query := "SELECT DISTINCT Path FROM `.sys/partition_stats` WHERE Path NOT LIKE '%/.sys%'"
-	tables, err := db.conn.QueryContext(ydbsql.WithScanQuery(context.Background()), query)
+	tables, err := db.conn.QueryContext(ydb.WithQueryMode(context.Background(), ydb.ScanQueryMode), query)
 
 	if err != nil {
 		return &database.Error{OrigErr: err, Query: []byte(query)}
@@ -301,7 +303,7 @@ func (db *YDB) Drop() (err error) {
 
 		query = fmt.Sprintf("DROP TABLE `%s`", table)
 
-		if _, err := db.conn.ExecContext(ydbsql.WithSchemeQuery(context.Background()), query); err != nil {
+		if _, err := db.conn.ExecContext(ydb.WithQueryMode(context.Background(), ydb.SchemeQueryMode), query); err != nil {
 			return &database.Error{OrigErr: err, Query: []byte(query)}
 		}
 	}

@@ -23,11 +23,11 @@ import (
 	dt "github.com/golang-migrate/migrate/v4/database/testing"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 
-	ydbsql "github.com/ydb-platform/ydb-go-sql"
+	"github.com/ydb-platform/ydb-go-sdk/v3"
 )
 
 var (
-	certsDirectory = "/tmp/ydb_certs"
+	certsDirectory = "c:/tmp/ydb_certs"
 
 	opts = dktest.Options{
 		ReadyTimeout: 15 * time.Second,
@@ -124,6 +124,7 @@ func TestMigrate(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		dt.TestMigrate(t, m)
 	})
 }
@@ -147,7 +148,8 @@ func TestMultipleStatements(t *testing.T) {
 
 		// make sure second table exists
 		var table string
-		if err := d.(*YDB).conn.QueryRowContext(ydbsql.WithScanQuery(context.Background()), "SELECT DISTINCT Path FROM `.sys/partition_stats` WHERE Path LIKE 'bar'").Scan(&table); err != sql.ErrNoRows {
+
+		if err := d.(*YDB).conn.QueryRowContext(ydb.WithQueryMode(context.Background(), ydb.ScanQueryMode), "SELECT DISTINCT Path FROM `.sys/partition_stats` WHERE Path LIKE 'bar'").Scan(&table); err != sql.ErrNoRows {
 			t.Fatalf("expected table bar to exist")
 		}
 	})
