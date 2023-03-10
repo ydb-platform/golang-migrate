@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	certsDirectory = "c:/tmp/ydb_certs"
+	certsDirectory = path.Join(os.TempDir(), "ydb_certs")
 
 	opts = dktest.Options{
 		ReadyTimeout: 15 * time.Second,
