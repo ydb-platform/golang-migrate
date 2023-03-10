@@ -671,6 +671,8 @@ github.com/ydb-platform/ydb-go-genproto v0.0.0-20221215182650-986f9d10542f h1:BB
 github.com/ydb-platform/ydb-go-genproto v0.0.0-20221215182650-986f9d10542f/go.mod h1:Er+FePu1dNUieD+XTMDduGpQuCPssK5Q4BjF+IIXJ3I=
 github.com/ydb-platform/ydb-go-sdk/v3 v3.42.14 h1:jmeJ2TC1epMZRO0V288SCV1iavjsvf3HxHLwZI4BLrE=
 github.com/ydb-platform/ydb-go-sdk/v3 v3.42.14/go.mod h1:9Y49weCjXl698kMDAvnm6CmwtdoYckVtlahS4TH1Tiw=
+github.com/ydb-platform/ydb-go-sdk/v3 v3.42.15 h1:Tg94TpfFcogqlqRVHewtIkNAPbTKJ/lJmzVhPRd3mJw=
+github.com/ydb-platform/ydb-go-sdk/v3 v3.42.15/go.mod h1:9Y49weCjXl698kMDAvnm6CmwtdoYckVtlahS4TH1Tiw=
 github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d h1:splanxYIlg+5LfHAM6xpdFEAYOk8iySO56hMFq6uLyA=
 github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d/go.mod h1:rHwXgn7JulP+udvsHwJoVG1YGAP6VLg4y9I5dyZdqmA=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
