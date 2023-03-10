@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
-	"log"
 	"net/url"
 	"strconv"
 	"strings"
@@ -60,6 +59,8 @@ func WithInstance(conn *sql.DB, config *Config) (database.Driver, error) {
 
 	return db, nil
 }
+
+var _ database.Driver = (*YDB)(nil)
 
 type YDB struct {
 	conn     *sql.DB
@@ -144,8 +145,7 @@ func (db *YDB) execMigration(migration string) error {
 
 		break
 	}
-	// LOG
-	log.Print(migration)
+
 	_, err := db.conn.ExecContext(ctx, migration)
 	return err
 }
