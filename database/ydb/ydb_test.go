@@ -10,12 +10,10 @@ import (
 	"io"
 	"log"
 	"os"
-	"path"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/go-connections/nat"
 	"github.com/golang-migrate/migrate/v4"
 
@@ -26,46 +24,43 @@ import (
 	"github.com/ydb-platform/ydb-go-sdk/v3"
 )
 
-var (
-	certsDirectory = path.Join(os.TempDir(), "ydb_certs")
+const (
+	host          = "localhost"
+	port          = "2136"
+	testDB        = "database=/local"
+	scheme        = "x-use-grpc-scheme"
+	dbPingTimeout = 5 * time.Second
+)
 
+var (
 	opts = dktest.Options{
 		ReadyTimeout: 15 * time.Second,
-		Hostname:     "localhost",
+		Hostname:     host,
 		Env: map[string]string{
 			"YDB_USE_IN_MEMORY_PDISKS": "true",
 		},
 		PortBindings: nat.PortMap{
-			nat.Port("2135/tcp"): []nat.PortBinding{{
+			nat.Port(fmt.Sprintf("%s/tcp", port)): []nat.PortBinding{{
 				HostIP:   "0.0.0.0",
-				HostPort: "2135",
+				HostPort: port,
 			}},
 		},
 		ReadyFunc: isReady,
-		Mounts: []mount.Mount{
-			{
-				Type:   mount.TypeBind,
-				Source: certsDirectory,
-				Target: "/ydb_certs",
-			},
-		},
 	}
 
 	image = "cr.yandex/yc/yandex-docker-local-ydb:latest"
 )
 
 func init() {
-	_ = os.MkdirAll(certsDirectory, os.ModePerm)
-	_ = os.Setenv("YDB_SSL_ROOT_CERTIFICATES_FILE", path.Join(certsDirectory, "ca.pem"))
 	_ = os.Setenv("YDB_ANONYMOUS_CREDENTIALS", "1")
 }
 
 func ydbConnectionString(options ...string) string {
-	return fmt.Sprintf("grpcs://localhost:2135/?%s", strings.Join(options, "&"))
+	return fmt.Sprintf("grpc://localhost:%s/?%s", port, strings.Join(options, "&"))
 }
 
 func isReady(ctx context.Context, c dktest.ContainerInfo) bool {
-	db, err := sql.Open("ydb", ydbConnectionString("localhost", "2135", "database=/local", "x-use-grpcs-scheme"))
+	db, err := sql.Open("ydb", ydbConnectionString(host, port, testDB, scheme))
 	if err != nil {
 		return false
 	}
@@ -74,7 +69,11 @@ func isReady(ctx context.Context, c dktest.ContainerInfo) bool {
 			log.Println("close error:", err)
 		}
 	}()
-	if err = db.PingContext(ctx); err != nil {
+
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, dbPingTimeout)
+	defer cancel()
+
+	if err = db.PingContext(ctxWithTimeout); err != nil {
 		switch err {
 		case sqldriver.ErrBadConn, io.EOF:
 			return false
@@ -92,7 +91,7 @@ func isReady(ctx context.Context, c dktest.ContainerInfo) bool {
 
 func Test(t *testing.T) {
 	dktest.Run(t, image, opts, func(t *testing.T, c dktest.ContainerInfo) {
-		addr := ydbConnectionString("localhost", "2135", "database=/local", "x-use-grpcs-scheme")
+		addr := ydbConnectionString(host, port, testDB, scheme)
 		p := &YDB{}
 		d, err := p.Open(addr)
 		if err != nil {
@@ -109,7 +108,7 @@ func Test(t *testing.T) {
 
 func TestMigrate(t *testing.T) {
 	dktest.Run(t, image, opts, func(t *testing.T, c dktest.ContainerInfo) {
-		addr := ydbConnectionString("localhost", "2135", "database=/local", "x-use-grpcs-scheme")
+		addr := ydbConnectionString(host, port, testDB, scheme)
 		p := &YDB{}
 		d, err := p.Open(addr)
 		if err != nil {
@@ -131,7 +130,7 @@ func TestMigrate(t *testing.T) {
 
 func TestMultipleStatements(t *testing.T) {
 	dktest.Run(t, image, opts, func(t *testing.T, c dktest.ContainerInfo) {
-		addr := ydbConnectionString("localhost", "2135", "database=/local", "x-use-grpcs-scheme")
+		addr := ydbConnectionString(host, port, testDB, scheme)
 		p := &YDB{}
 		d, err := p.Open(addr)
 		if err != nil {
