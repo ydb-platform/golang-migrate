@@ -13,5 +13,6 @@
 | `x-use-grpcs` | Enable GRPCS protocol for connecting to YDB (default GRPC) |
 
 ## Warning
+- It is not possible to use DDL and DML queries simultaneously within a single migration.
 - Beware of race conditions between migrations initiated from different processes (on the same machine or on different machines).
 - Beware of partial migrations, because currently in YDB it is not possible to execute DDL SQL statements in a transaction.
